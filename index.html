@@ -3,123 +3,360 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bluetooth Connect App</title>
+<title>Smart POS Premium</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body { font-family: sans-serif; }
+body { font-family: 'Inter', sans-serif; }
 </style>
 </head>
 
-<body class="bg-gradient-to-br from-blue-100 to-blue-50 min-h-screen flex items-center justify-center">
+<body class="bg-gray-100">
 
-<div class="bg-white w-[95%] max-w-md p-6 rounded-2xl shadow-xl">
+<div class="max-w-md mx-auto bg-white min-h-screen">
 
-  <h1 class="text-2xl font-bold text-center mb-4">🔵 Bluetooth Connect</h1>
+<!-- HEADER -->
+<div class="p-4 bg-gradient-to-r from-black to-gray-800 text-white text-center text-lg font-bold shadow">
+🧾 Smart POS
+</div>
 
-  <p id="status" class="text-center text-gray-600 mb-4">
-    Click below to scan BLE devices
-  </p>
+<!-- SEARCH -->
+<div class="p-3 sticky top-0 bg-white z-10">
+<input id="search" placeholder="🔍 Search food..."
+class="w-full p-3 rounded-xl bg-gray-100 focus:ring-2 focus:ring-black outline-none"
+oninput="renderItems()">
+</div>
 
-  <!-- Connect Button -->
-  <button onclick="connectBluetooth()" 
-    class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold active:scale-95 transition">
-    Scan & Connect
-  </button>
+<!-- CATEGORY -->
+<div id="categories" class="flex overflow-x-auto px-3 gap-2 pb-2"></div>
 
-  <!-- Loader -->
-  <div id="loader" class="hidden text-center mt-4 text-blue-600">
-    🔄 Searching for devices...
-  </div>
+<!-- ITEMS -->
+<div id="itemsContainer" class="px-3 space-y-3 pb-40"></div>
 
-  <!-- Device Info -->
-  <div id="deviceBox" class="hidden mt-5 bg-gray-50 p-4 rounded-xl">
-    <h2 class="font-semibold mb-2">Device Info</h2>
-    <p><strong>Name:</strong> <span id="deviceName"></span></p>
-    <p><strong>ID:</strong> <span id="deviceId"></span></p>
-    <p><strong>Status:</strong> <span class="text-green-600">Connected</span></p>
-  </div>
+<!-- CART -->
+<div class="fixed bottom-0 w-full max-w-md bg-white border-t p-3 shadow-lg">
 
-  <!-- Disconnect -->
-  <button id="disconnectBtn" onclick="disconnectDevice()" 
-    class="hidden mt-4 w-full bg-red-500 text-white py-2 rounded-xl">
-    Disconnect
-  </button>
+<div id="cartItems" class="max-h-32 overflow-y-auto text-sm mb-2"></div>
 
-  <!-- Error -->
-  <div id="errorBox" class="hidden mt-4 text-red-500 text-center"></div>
+<div class="flex justify-between font-bold text-lg">
+<span>Total</span>
+<span>Rs. <span id="total">0</span></span>
+</div>
+
+<div class="grid grid-cols-2 gap-2 mt-3">
+<button onclick="connectBluetooth()" class="bg-blue-600 text-white py-2 rounded-xl">Connect</button>
+<button onclick="printBill()" class="bg-black text-white py-2 rounded-xl">Print</button>
+</div>
+
+</div>
 
 </div>
 
 <script>
 
-let selectedDevice = null;
+// ================= MENU =================
+let allItems = [
 
-async function connectBluetooth() {
+{cat:"Noodles", name:"Veg Noodles", price:[50,70]},
+{cat:"Noodles", name:"Hakka Noodles", price:[50,70]},
+{cat:"Noodles", name:"Schezwan Noodles", price:[60,80]},
+{cat:"Noodles", name:"Chilli Garlic Noodles", price:[60,80]},
+{cat:"Noodles", name:"Crispy Noodles", price:[60,80]},
+{cat:"Noodles", name:"Manchurian Noodles", price:[70,90]},
+{cat:"Noodles", name:"Paneer Noodles", price:[100]},
 
-  const status = document.getElementById("status");
-  const loader = document.getElementById("loader");
-  const deviceBox = document.getElementById("deviceBox");
-  const errorBox = document.getElementById("errorBox");
-  const disconnectBtn = document.getElementById("disconnectBtn");
+{cat:"Rice", name:"Veg Fried Rice", price:[50,70]},
+{cat:"Rice", name:"Schezwan Rice", price:[60,80]},
+{cat:"Rice", name:"Chilli Garlic Rice", price:[60,80]},
+{cat:"Rice", name:"Manchurian Rice", price:[70,90]},
+{cat:"Rice", name:"Paneer Rice", price:[100]},
+{cat:"Rice", name:"All in One Combi", price:[90]},
 
-  // Reset UI
-  errorBox.classList.add("hidden");
-  deviceBox.classList.add("hidden");
-  disconnectBtn.classList.add("hidden");
+{cat:"Pizza", name:"Veg Cheese Pizza", price:[80]},
+{cat:"Pizza", name:"Plain Cheese Pizza", price:[80]},
+{cat:"Pizza", name:"Tomato Cheese Pizza", price:[100]},
+{cat:"Pizza", name:"Onion Cheese Pizza", price:[100]},
+{cat:"Pizza", name:"Corn Cheese Pizza", price:[100]},
+{cat:"Pizza", name:"Capsicum Cheese Pizza", price:[100]},
+{cat:"Pizza", name:"Extra Cheese Pizza", price:[120]},
+{cat:"Pizza", name:"Paneer Cheese Pizza", price:[120]},
 
-  loader.classList.remove("hidden");
-  status.innerText = "Requesting Bluetooth device...";
+{cat:"Sandwich", name:"Veg Sandwich", price:[60]},
+{cat:"Sandwich", name:"Veg Cheese Sandwich", price:[70]},
+{cat:"Sandwich", name:"Corn Sandwich", price:[70]},
+{cat:"Sandwich", name:"Corn Cheese Sandwich", price:[80]},
+{cat:"Sandwich", name:"Extra Cheese Sandwich", price:[90]},
+{cat:"Sandwich", name:"Paneer Sandwich", price:[100]},
+{cat:"Sandwich", name:"Paneer Cheese Sandwich", price:[110]},
 
-  try {
+{cat:"Burger", name:"Veg Burger", price:[60]},
+{cat:"Burger", name:"Veg Cheese Burger", price:[70]},
+{cat:"Burger", name:"Corn Burger", price:[70]},
+{cat:"Burger", name:"Corn Cheese Burger", price:[80]},
+{cat:"Burger", name:"Extra Cheese Burger", price:[90]},
+{cat:"Burger", name:"Paneer Burger", price:[100]},
+{cat:"Burger", name:"Paneer Cheese Burger", price:[110]},
 
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: ['battery_service']
+{cat:"Pasta", name:"Veg Cheese Pasta", price:[80]},
+{cat:"Pasta", name:"Chinese Pasta", price:[70]},
+{cat:"Pasta", name:"Tomato Pasta", price:[80]},
+{cat:"Pasta", name:"Tomato Cheese Pasta", price:[90]},
+{cat:"Pasta", name:"Chilli Garlic Pasta", price:[80]},
+{cat:"Pasta", name:"Paneer Pasta", price:[90]},
+{cat:"Pasta", name:"Paneer Cheese Pasta", price:[100]},
+
+{cat:"Drinks", name:"Cold Coffee", price:[60]},
+{cat:"Drinks", name:"Cold Coffee with Ice Cream", price:[70]},
+{cat:"Drinks", name:"Chocolate Shake", price:[70]},
+{cat:"Drinks", name:"Strawberry Shake", price:[80]},
+{cat:"Drinks", name:"Butterscotch Shake", price:[90]},
+{cat:"Drinks", name:"Oreo Shake", price:[70]},
+{cat:"Drinks", name:"Virgin Mojito", price:[80]},
+{cat:"Drinks", name:"Blue Berry", price:[80]},
+{cat:"Drinks", name:"Mango Shake", price:[80]},
+{cat:"Drinks", name:"Pineapple Shake", price:[80]},
+
+{cat:"Fries", name:"French Fries", price:[50]},
+{cat:"Fries", name:"Peri Peri Fries", price:[60]},
+{cat:"Fries", name:"Cheese Peri Peri Fries", price:[80]},
+
+{cat:"Soup", name:"Hot & Sour Soup", price:[50]},
+{cat:"Soup", name:"Manchow Soup", price:[50]},
+{cat:"Soup", name:"Tomato Soup", price:[50]},
+{cat:"Soup", name:"Sweet Corn Soup", price:[50]},
+
+{cat:"Momos", name:"Steam Momos", price:[60]},
+{cat:"Momos", name:"Fried Momos", price:[70]},
+{cat:"Momos", name:"Gravy Momos", price:[90]},
+{cat:"Momos", name:"Kurkure Momos", price:[100]},
+
+{cat:"Manchurian", name:"Dry Manchurian", price:[60,80]},
+{cat:"Manchurian", name:"Semi Gravy Manchurian", price:[60,80]},
+{cat:"Manchurian", name:"Gravy Manchurian", price:[60,80]},
+{cat:"Manchurian", name:"Crispy Manchurian", price:[60,80]},
+
+{cat:"Special", name:"Chilli Potato", price:[120]},
+{cat:"Special", name:"Chilli Paneer", price:[130]},
+{cat:"Special", name:"Veg Kothe", price:[100]},
+{cat:"Special", name:"Chole Bhature", price:[80]},
+
+{cat:"Maggi", name:"Plain Maggi", price:[50]},
+{cat:"Maggi", name:"Veg Maggi", price:[60]},
+{cat:"Maggi", name:"Cheese Maggi", price:[70]}
+];
+
+// ================= STATE =================
+let cart = {};
+let selectedCategory = "All";
+let device, characteristic;
+
+// ================= INIT =================
+initCategories();
+renderItems();
+
+// ================= CATEGORY =================
+function initCategories(){
+    let cats = ["All", ...new Set(allItems.map(i => i.cat))];
+    let container = document.getElementById("categories");
+
+    container.innerHTML = "";
+
+    cats.forEach(cat=>{
+        container.innerHTML += `
+        <button onclick="selectCategory('${cat}')"
+        class="px-4 py-1 rounded-full text-sm whitespace-nowrap 
+        ${selectedCategory===cat ? 'bg-black text-white' : 'bg-gray-200'}">
+        ${cat}
+        </button>`;
+    });
+}
+
+function selectCategory(cat){
+    selectedCategory = cat;
+    initCategories();
+    renderItems();
+}
+
+// ================= RENDER ITEMS =================
+function renderItems(){
+    let search = document.getElementById("search").value.toLowerCase();
+    let container = document.getElementById("itemsContainer");
+
+    container.innerHTML = "";
+
+    allItems
+    .filter(i => 
+        (selectedCategory==="All" || i.cat===selectedCategory) &&
+        i.name.toLowerCase().includes(search)
+    )
+    .forEach(item => {
+
+        let halfKey = item.name + "_Half";
+        let fullKey = item.name + "_Full";
+        let regularKey = item.name + "_Regular";
+
+        let halfQty = cart[halfKey]?.qty || 0;
+        let fullQty = cart[fullKey]?.qty || 0;
+        let regularQty = cart[regularKey]?.qty || 0;
+
+        let rightUI = "";
+
+        if(item.price.length > 1){
+
+            rightUI = `
+            <div class="flex flex-col gap-2 items-end">
+
+                ${
+                halfQty === 0
+                ? `<button onclick="addToCart('${item.name}', ${item.price[0]}, 'Half')" 
+                    class="bg-gray-200 px-3 py-1 rounded-full text-xs shadow">
+                    Half ₹${item.price[0]}
+                   </button>`
+                : `<div class="flex items-center gap-2 bg-gray-200 px-3 py-1 rounded-full">
+                        <button onclick="updateQty('${item.name}','Half',-1)">−</button>
+                        <span class="font-bold">${halfQty}</span>
+                        <button onclick="updateQty('${item.name}','Half',1)">+</button>
+                   </div>`
+                }
+
+                ${
+                fullQty === 0
+                ? `<button onclick="addToCart('${item.name}', ${item.price[1]}, 'Full')" 
+                    class="bg-black text-white px-3 py-1 rounded-full text-xs shadow">
+                    Full ₹${item.price[1]}
+                   </button>`
+                : `<div class="flex items-center gap-2 bg-black text-white px-3 py-1 rounded-full">
+                        <button onclick="updateQty('${item.name}','Full',-1)">−</button>
+                        <span class="font-bold">${fullQty}</span>
+                        <button onclick="updateQty('${item.name}','Full',1)">+</button>
+                   </div>`
+                }
+
+            </div>`;
+        }
+
+        else {
+            rightUI = (regularQty === 0)
+                ? `<button onclick="addToCart('${item.name}', ${item.price[0]}, 'Regular')" 
+                    class="bg-black text-white px-4 py-1 rounded-full shadow">
+                    Add ₹${item.price[0]}
+                   </button>`
+                : `<div class="flex items-center gap-3 bg-black text-white px-3 py-1 rounded-full">
+                        <button onclick="updateQty('${item.name}','Regular',-1)">−</button>
+                        <span class="font-bold">${regularQty}</span>
+                        <button onclick="updateQty('${item.name}','Regular',1)">+</button>
+                   </div>`;
+        }
+
+        container.innerHTML += `
+        <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
+            <div>
+                <div class="font-semibold text-gray-800">${item.name}</div>
+                <div class="text-xs text-gray-400 mt-1">${item.cat}</div>
+            </div>
+            ${rightUI}
+        </div>`;
     });
 
-    selectedDevice = device;
-
-    // Connect to GATT Server (BLE)
-    const server = await device.gatt.connect();
-
-    loader.classList.add("hidden");
-
-    // Show Device Info
-    document.getElementById("deviceName").innerText = device.name || "Unknown Device";
-    document.getElementById("deviceId").innerText = device.id;
-
-    deviceBox.classList.remove("hidden");
-    disconnectBtn.classList.remove("hidden");
-
-    status.innerText = "✅ Connected Successfully";
-
-    console.log("Connected:", device);
-
-  } catch (error) {
-
-    loader.classList.add("hidden");
-
-    errorBox.innerText = "❌ " + error.message;
-    errorBox.classList.remove("hidden");
-
-    status.innerText = "Connection Failed";
-
-    console.error(error);
-  }
+    renderCart();
 }
 
-// Disconnect function
-function disconnectDevice() {
-  if (selectedDevice && selectedDevice.gatt.connected) {
-    selectedDevice.gatt.disconnect();
-    document.getElementById("status").innerText = "Disconnected";
-    document.getElementById("deviceBox").classList.add("hidden");
-    document.getElementById("disconnectBtn").classList.add("hidden");
-  }
+// ================= ADD =================
+function addToCart(name, price, type){
+    let key = name + "_" + type;
+
+    if(cart[key]){
+        cart[key].qty++;
+    } else {
+        cart[key] = {name, price, type, qty:1};
+    }
+
+    renderItems();
 }
 
+// ================= UPDATE =================
+function updateQty(name, type, change){
+    let key = name + "_" + type;
+
+    if(cart[key]){
+        cart[key].qty += change;
+        if(cart[key].qty <= 0) delete cart[key];
+    }
+
+    renderItems();
+}
+
+// ================= CART =================
+function renderCart(){
+    let cartDiv = document.getElementById("cartItems");
+    let total = 0;
+
+    cartDiv.innerHTML = "";
+
+    Object.keys(cart).forEach(key=>{
+        let item = cart[key];
+        let subtotal = item.qty * item.price;
+        total += subtotal;
+
+        cartDiv.innerHTML += `
+        <div class="flex justify-between">
+            <span>${item.name} (${item.type}) x${item.qty}</span>
+            <span>Rs.${subtotal}</span>
+        </div>`;
+    });
+
+    document.getElementById("total").innerText = total;
+}
+
+// ================= BLUETOOTH =================
+async function connectBluetooth(){
+    try{
+        device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices:true,
+            optionalServices:['000018f0-0000-1000-8000-00805f9b34fb']
+        });
+
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+
+        alert("Printer Connected!");
+    }catch{
+        alert("Bluetooth Failed");
+    }
+}
+
+// ================= PRINT =================
+async function printBill(){
+    if(!characteristic) return alert("Connect printer first!");
+
+    let text = "The Dream Cone Cafe & Resturant\n----------------\n";
+    let total = 0;
+
+    Object.keys(cart).forEach(key=>{
+        let item = cart[key];
+        let subtotal = item.qty * item.price;
+        total += subtotal;
+
+        text += `${item.name} (${item.type}) x${item.qty} Rs.${subtotal}\n`;
+    });
+
+    text += "----------------\n";
+    text += `TOTAL: Rs.${total}\n`;
+    text += "Thank You 🙏\n";
+
+    let data = new Uint8Array([
+        0x1B,0x40,
+        0x1B,0x74,0x10,
+        0x1C,0x26,
+        0x1B,0x61,0x01,
+        ...new TextEncoder().encode(text),
+        0x0A,0x0A,0x0A
+    ]);
+
+    await characteristic.writeValue(data);
+}
 </script>
 
 </body>
