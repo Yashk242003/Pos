@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bluetooth Connect App</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body { font-family: sans-serif; }
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-100 to-blue-50 min-h-screen flex items-center justify-center">
+
+<div class="bg-white w-[95%] max-w-md p-6 rounded-2xl shadow-xl">
+
+  <h1 class="text-2xl font-bold text-center mb-4">🔵 Bluetooth Connect</h1>
+
+  <p id="status" class="text-center text-gray-600 mb-4">
+    Click below to scan BLE devices
+  </p>
+
+  <!-- Connect Button -->
+  <button onclick="connectBluetooth()" 
+    class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold active:scale-95 transition">
+    Scan & Connect
+  </button>
+
+  <!-- Loader -->
+  <div id="loader" class="hidden text-center mt-4 text-blue-600">
+    🔄 Searching for devices...
+  </div>
+
+  <!-- Device Info -->
+  <div id="deviceBox" class="hidden mt-5 bg-gray-50 p-4 rounded-xl">
+    <h2 class="font-semibold mb-2">Device Info</h2>
+    <p><strong>Name:</strong> <span id="deviceName"></span></p>
+    <p><strong>ID:</strong> <span id="deviceId"></span></p>
+    <p><strong>Status:</strong> <span class="text-green-600">Connected</span></p>
+  </div>
+
+  <!-- Disconnect -->
+  <button id="disconnectBtn" onclick="disconnectDevice()" 
+    class="hidden mt-4 w-full bg-red-500 text-white py-2 rounded-xl">
+    Disconnect
+  </button>
+
+  <!-- Error -->
+  <div id="errorBox" class="hidden mt-4 text-red-500 text-center"></div>
+
+</div>
+
+<script>
+
+let selectedDevice = null;
+
+async function connectBluetooth() {
+
+  const status = document.getElementById("status");
+  const loader = document.getElementById("loader");
+  const deviceBox = document.getElementById("deviceBox");
+  const errorBox = document.getElementById("errorBox");
+  const disconnectBtn = document.getElementById("disconnectBtn");
+
+  // Reset UI
+  errorBox.classList.add("hidden");
+  deviceBox.classList.add("hidden");
+  disconnectBtn.classList.add("hidden");
+
+  loader.classList.remove("hidden");
+  status.innerText = "Requesting Bluetooth device...";
+
+  try {
+
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ['battery_service']
+    });
+
+    selectedDevice = device;
+
+    // Connect to GATT Server (BLE)
+    const server = await device.gatt.connect();
+
+    loader.classList.add("hidden");
+
+    // Show Device Info
+    document.getElementById("deviceName").innerText = device.name || "Unknown Device";
+    document.getElementById("deviceId").innerText = device.id;
+
+    deviceBox.classList.remove("hidden");
+    disconnectBtn.classList.remove("hidden");
+
+    status.innerText = "✅ Connected Successfully";
+
+    console.log("Connected:", device);
+
+  } catch (error) {
+
+    loader.classList.add("hidden");
+
+    errorBox.innerText = "❌ " + error.message;
+    errorBox.classList.remove("hidden");
+
+    status.innerText = "Connection Failed";
+
+    console.error(error);
+  }
+}
+
+// Disconnect function
+function disconnectDevice() {
+  if (selectedDevice && selectedDevice.gatt.connected) {
+    selectedDevice.gatt.disconnect();
+    document.getElementById("status").innerText = "Disconnected";
+    document.getElementById("deviceBox").classList.add("hidden");
+    document.getElementById("disconnectBtn").classList.add("hidden");
+  }
+}
+
+</script>
+
+</body>
+</html>
