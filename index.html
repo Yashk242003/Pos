@@ -334,16 +334,13 @@ async function printBill() {
     let total = 0;
     let encoder = new TextEncoder();
 
-    // 🕒 Date & Time
     let now = new Date();
     let date = now.toLocaleDateString();
     let time = now.toLocaleTimeString();
-
-    // 🧾 Bill Number (simple random)
     let billNo = Math.floor(Math.random() * 10000);
 
     // 🧾 Header
-    let header = 
+    let header =
 `The Dream Cone Cafe & Restaurant
 Bhopal
 Date: ${date}
@@ -352,46 +349,39 @@ Bill No: ${billNo}
 --------------------------------
 `;
 
-    // 🧾 Column Title
-    let columns = "Item        Qty   Price\n";
-    columns += "--------------------------------\n";
-
-    // 🧾 Items
     let body = "";
 
+    // 🧾 Items (FULL NAME + HALF/FULL)
     Object.keys(cart).forEach(key => {
         let item = cart[key];
         let subtotal = item.qty * item.price;
         total += subtotal;
 
-        // Format spacing (important 🔥)
-        let name = item.name.substring(0, 10).padEnd(12);
-        let qty = String(item.qty).padEnd(5);
-        let price = String(subtotal).padStart(5);
+        // 🔥 Line 1 → FULL NAME
+        body += `${item.name}\n`;
 
-        body += `${name}${qty}${price}\n`;
+        // 🔥 Line 2 → Details
+        body += `  ${item.type}  ${item.qty} x Rs.${item.price} = Rs.${subtotal}\n`;
     });
 
-    // 🧾 Footer
     let footer =
 `--------------------------------
 TOTAL: Rs.${total}
 --------------------------------
 `;
 
-    let thanks = "Thank You\nVisit Again!\n";
+    let thanks = "Thank You 🙏\nVisit Again!\n";
 
     let data = new Uint8Array([
 
-        0x1B, 0x40,   // Initialize
+        0x1B, 0x40,
 
         // 🔵 CENTER HEADER
         0x1B, 0x61, 0x01,
         ...encoder.encode(header),
 
-        // 🔵 LEFT CONTENT
+        // 🔵 LEFT ITEMS
         0x1B, 0x61, 0x00,
-        ...encoder.encode(columns),
         ...encoder.encode(body),
         ...encoder.encode(footer),
 
